@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>microgpt.py — Annotated Source</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* ---- Reset & Base ---- */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #30404f;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f0;
+    }
+    a { color: #261a3b; }
+    a:visited { color: #261a3b; }
+
+    /* ---- Container ---- */
+    #container {
+      max-width: 1180px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+      box-shadow: 0 0 30px rgba(0,0,0,0.08);
+    }
+    #background {
+      position: fixed;
+      top: 0; bottom: 0;
+      width: 50%;
+      right: 50%;
+      margin-right: -590px;
+      background: #fff;
+      z-index: -1;
+    }
+
+    /* ---- Table of Contents ---- */
+    .toc-wrapper {
+      padding: 40px 60px 20px;
+      border-bottom: 1px solid #e5e5e0;
+    }
+    .toc-wrapper h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #999;
+      margin-bottom: 12px;
+    }
+    .toc {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      columns: 2;
+      -webkit-columns: 2;
+    }
+    .toc li {
+      margin-bottom: 4px;
+    }
+    .toc a {
+      text-decoration: none;
+      color: #454545;
+      font-size: 14px;
+    }
+    .toc a:hover {
+      color: #000;
+      text-decoration: underline;
+    }
+
+    /* ---- Sections ---- */
+    ul.sections {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    ul.sections > li {
+      display: flex;
+      border-bottom: 1px solid #eee;
+      min-height: 40px;
+    }
+    ul.sections > li#title {
+      display: block;
+      border-bottom: 1px solid #e5e5e0;
+    }
+
+    /* ---- Annotation (left column) ---- */
+    .annotation {
+      width: 46%;
+      min-width: 46%;
+      padding: 14px 28px 14px 50px;
+      position: relative;
+      overflow: auto;
+    }
+    .annotation h1 {
+      font-size: 28px;
+      margin: 20px 0 6px;
+      font-weight: normal;
+    }
+    .annotation h2 {
+      font-size: 20px;
+      margin: 16px 0 8px;
+      font-weight: normal;
+      color: #000;
+      padding-top: 10px;
+    }
+    .annotation h3 {
+      font-size: 15px;
+      margin: 10px 0 4px;
+      font-weight: bold;
+      color: #333;
+    }
+    .annotation p {
+      margin: 6px 0;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .annotation ul, .annotation ol {
+      font-size: 14px;
+      line-height: 1.65;
+      padding-left: 20px;
+    }
+    .annotation code {
+      font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      background: #f0f0ea;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .annotation .subtitle {
+      font-size: 14px;
+      color: #888;
+      margin-top: 0;
+    }
+    .annotation .author {
+      font-size: 13px;
+      color: #999;
+      font-style: italic;
+    }
+    .sswrap {
+      position: absolute;
+      left: 18px;
+      top: 14px;
+    }
+    .sswrap .ss {
+      text-decoration: none;
+      color: #ddd;
+      font-size: 14px;
+    }
+    .sswrap .ss:hover { color: #888; }
+
+    /* ---- Code (right column) ---- */
+    .content {
+      width: 54%;
+      min-width: 54%;
+      background: #f8f8f2;
+      border-left: 1px solid #e5e5e0;
+      padding: 14px 20px;
+      overflow-x: auto;
+    }
+    .content pre {
+      margin: 0;
+      font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre;
+    }
+
+    /* ---- Section header rows ---- */
+    li.section-header .annotation {
+      padding-top: 28px;
+      padding-bottom: 10px;
+    }
+    li.section-header .content {
+      background: transparent;
+      border-left-color: transparent;
+    }
+
+    /* ---- Title section ---- */
+    #title .annotation {
+      width: 100%;
+      padding: 40px 60px 30px;
+    }
+
+    /* ---- Syntax Highlighting (Monokai-ish for Docco feel) ---- */
+    .kw { color: #66d9ef; font-style: italic; }   /* keywords */
+    .fn { color: #a6e22e; }                         /* function/class names */
+    .st { color: #e6db74; }                          /* strings */
+    .cm { color: #75715e; font-style: italic; }     /* comments */
+    .nb { color: #f92672; }                          /* builtins / special */
+    .nn { color: #fd971f; }                          /* numbers */
+    .op { color: #f92672; }                          /* operators */
+    .dc { color: #ae81ff; }                          /* decorators / special values */
+    .slf { color: #fd971f; font-style: italic; }    /* self */
+
+    /* ---- Responsive ---- */
+    @media (max-width: 800px) {
+      ul.sections > li {
+        flex-direction: column;
+      }
+      .annotation, .content {
+        width: 100% !important;
+        min-width: 100% !important;
+      }
+      .content {
+        border-left: none;
+        border-top: 1px solid #e5e5e0;
+      }
+      .toc { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+
+    <ul class="sections">
+
+      <!-- ======== TITLE ======== -->
+      <li id="title">
+        <div class="annotation">
+          <h1>microgpt.py</h1>
+          <p class="subtitle">The most atomic way to train and run inference for a GPT in pure, dependency-free Python.</p>
+          <p class="author">by <a href="https://twitter.com/karpathy">@karpathy</a></p>
+          <p style="font-size:13px; color:#777; margin-top:16px;">
+            This page presents Andrej Karpathy's <code>microgpt.py</code> as a literate program.
+            The entire file is the complete algorithm &mdash; <em>everything else is just efficiency</em>.
+            On the left you'll find prose annotations; on the right, the corresponding code.
+          </p>
+          <div class="toc-wrapper" style="padding-left:0; padding-right:0; border-bottom:none;">
+            <h2>Table of Contents</h2>
+            <ul class="toc">
+              <li><a href="#section-preamble">Preamble &amp; Imports</a></li>
+              <li><a href="#section-dataset">Dataset</a></li>
+              <li><a href="#section-tokenizer">Tokenizer</a></li>
+              <li><a href="#section-autograd">Autograd Engine</a></li>
+              <li><a href="#section-value-ops">Value: Arithmetic Ops</a></li>
+              <li><a href="#section-value-unary">Value: Unary &amp; Reverse Ops</a></li>
+              <li><a href="#section-backward">Backward Pass</a></li>
+              <li><a href="#section-hyperparams">Hyperparameters</a></li>
+              <li><a href="#section-parameters">Parameter Initialization</a></li>
+              <li><a href="#section-building-blocks">Model Building Blocks</a></li>
+              <li><a href="#section-gpt-forward">GPT Forward Pass</a></li>
+              <li><a href="#section-attention">Multi-Head Attention</a></li>
+              <li><a href="#section-mlp">Feed-Forward (MLP) Block</a></li>
+              <li><a href="#section-optimizer">Adam Optimizer</a></li>
+              <li><a href="#section-training-loop">Training Loop</a></li>
+              <li><a href="#section-adam-update">Adam Update Step</a></li>
+              <li><a href="#section-inference">Inference</a></li>
+            </ul>
+          </div>
+        </div>
+      </li>
+
+      <!-- ======== PREAMBLE ======== -->
+      <li id="section-preamble" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-preamble">&sect;</a></div>
+          <h2>Preamble &amp; Imports</h2>
+          <p>
+            The entire GPT &mdash; training and inference &mdash; uses only three Python standard library modules.
+            No PyTorch, no NumPy, no TensorFlow. Every operation is built from scratch using
+            pure scalar arithmetic. The random seed is fixed for reproducibility.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="st">"""
+The most atomic way to train and run inference
+for a GPT in pure, dependency-free Python.
+This file is the complete algorithm.
+Everything else is just efficiency.
+
+@karpathy
+"""</span>
+
+<span class="kw">import</span> os       <span class="cm"># os.path.exists</span>
+<span class="kw">import</span> math     <span class="cm"># math.log, math.exp</span>
+<span class="kw">import</span> random   <span class="cm"># random.seed, random.choices, random.gauss, random.shuffle</span>
+random.seed(<span class="nn">42</span>) <span class="cm"># Let there be order among chaos</span>
+</pre></div>
+      </li>
+
+      <!-- ======== DATASET ======== -->
+      <li id="section-dataset">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-dataset">&sect;</a></div>
+          <h2>Dataset</h2>
+          <p>
+            The dataset is a list of human names from Karpathy's
+            <a href="https://github.com/karpathy/makemore">makemore</a> project.
+            If <code>input.txt</code> isn't already on disk, it's downloaded automatically.
+            Each line becomes one "document" in our training set. The documents are shuffled
+            so the model doesn't memorize alphabetical order.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Let there be a Dataset `docs`: list[str] of documents</span>
+<span class="cm"># (e.g. a list of names)</span>
+<span class="kw">if</span> <span class="kw">not</span> os.path.exists(<span class="st">'input.txt'</span>):
+    <span class="kw">import</span> urllib.request
+    names_url = <span class="st">'https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt'</span>
+    urllib.request.urlretrieve(names_url, <span class="st">'input.txt'</span>)
+docs = [line.strip() <span class="kw">for</span> line <span class="kw">in</span> open(<span class="st">'input.txt'</span>) <span class="kw">if</span> line.strip()]
+random.shuffle(docs)
+print(<span class="st">f"num docs: <span class="nb">{</span>len(docs)<span class="nb">}</span>"</span>)
+</pre></div>
+      </li>
+
+      <!-- ======== TOKENIZER ======== -->
+      <li id="section-tokenizer">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-tokenizer">&sect;</a></div>
+          <h2>Tokenizer</h2>
+          <p>
+            The tokenizer is character-level &mdash; the simplest possible scheme.
+            Every unique character in the dataset gets a numeric ID. A special
+            <strong>BOS</strong> (Beginning of Sequence) token is appended to mark
+            the start and end of each name. For this names dataset, the vocabulary
+            is just the 26 lowercase letters plus the BOS token = 27 total tokens.
+          </p>
+          <p>
+            Production GPTs use sub-word tokenizers (BPE), but character-level
+            is perfect for learning the structure of the algorithm.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Let there be a Tokenizer to translate strings</span>
+<span class="cm"># to sequences of integers ("tokens") and back</span>
+uchars = sorted(set(<span class="st">''</span>.join(docs)))
+BOS = len(uchars)
+vocab_size = len(uchars) + <span class="nn">1</span>
+print(<span class="st">f"vocab size: <span class="nb">{</span>vocab_size<span class="nb">}</span>"</span>)
+</pre></div>
+      </li>
+
+      <!-- ======== AUTOGRAD ======== -->
+      <li id="section-autograd" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-autograd">&sect;</a></div>
+          <h2>Autograd Engine</h2>
+          <p>
+            The heart of any deep learning framework is automatic differentiation.
+            Here it's implemented in a single class: <code>Value</code>. Each <code>Value</code>
+            wraps a scalar number and tracks how it was computed (its children in
+            the computation graph and the local gradients of that operation).
+          </p>
+          <p>
+            During the <strong>forward pass</strong>, operations like <code>+</code>,
+            <code>*</code>, and <code>exp</code> build up a directed acyclic graph.
+            During the <strong>backward pass</strong>, gradients flow backwards through
+            this graph via the chain rule.
+          </p>
+          <p>
+            <code>__slots__</code> is a Python memory optimization &mdash; it prevents
+            creation of a <code>__dict__</code> per instance, which matters when you have
+            millions of <code>Value</code> nodes.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Let there be Autograd to recursively apply</span>
+<span class="cm"># the chain rule through a computation graph</span>
+<span class="kw">class</span> <span class="fn">Value</span>:
+    __slots__ = (
+        <span class="st">'data'</span>, <span class="st">'grad'</span>,
+        <span class="st">'_children'</span>, <span class="st">'_local_grads'</span>
+    )
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="slf">self</span>, data, children=(), local_grads=()):
+        <span class="slf">self</span>.data = data
+        <span class="slf">self</span>.grad = <span class="nn">0</span>
+        <span class="slf">self</span>._children = children
+        <span class="slf">self</span>._local_grads = local_grads
+</pre></div>
+      </li>
+
+      <!-- ======== VALUE OPS ======== -->
+      <li id="section-value-ops">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-value-ops">&sect;</a></div>
+          <h3>Arithmetic Operations</h3>
+          <p>
+            Each operation records the <em>local gradient</em> &mdash; the partial derivative
+            of the output with respect to each input. For example:
+          </p>
+          <ul>
+            <li><strong>Addition</strong> <code>a + b</code>: &part;(a+b)/&part;a = 1, &part;(a+b)/&part;b = 1</li>
+            <li><strong>Multiplication</strong> <code>a * b</code>: &part;(a·b)/&part;a = b, &part;(a·b)/&part;b = a</li>
+            <li><strong>Power</strong> <code>a ** n</code>: &part;(a<sup>n</sup>)/&part;a = n·a<sup>n-1</sup></li>
+          </ul>
+          <p>
+            Non-<code>Value</code> operands are automatically promoted via
+            <code>Value(other)</code>, so you can write <code>x + 1</code> freely.
+          </p>
+        </div>
+        <div class="content"><pre>
+    <span class="kw">def</span> <span class="fn">__add__</span>(<span class="slf">self</span>, other):
+        other = other <span class="kw">if</span> isinstance(other, Value) <span class="kw">else</span> Value(other)
+        <span class="kw">return</span> Value(
+            <span class="slf">self</span>.data + other.data,
+            (<span class="slf">self</span>, other), (<span class="nn">1</span>, <span class="nn">1</span>)
+        )
+
+    <span class="kw">def</span> <span class="fn">__mul__</span>(<span class="slf">self</span>, other):
+        other = other <span class="kw">if</span> isinstance(other, Value) <span class="kw">else</span> Value(other)
+        <span class="kw">return</span> Value(
+            <span class="slf">self</span>.data * other.data,
+            (<span class="slf">self</span>, other),
+            (other.data, <span class="slf">self</span>.data)
+        )
+
+    <span class="kw">def</span> <span class="fn">__pow__</span>(<span class="slf">self</span>, other):
+        <span class="kw">return</span> Value(
+            <span class="slf">self</span>.data ** other,
+            (<span class="slf">self</span>,),
+            (other * <span class="slf">self</span>.data ** (other - <span class="nn">1</span>),)
+        )
+</pre></div>
+      </li>
+
+      <!-- ======== VALUE UNARY ======== -->
+      <li id="section-value-unary">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-value-unary">&sect;</a></div>
+          <h3>Unary &amp; Reverse Operations</h3>
+          <p>
+            The transcendental functions <code>log</code>, <code>exp</code>, and <code>relu</code>
+            each have well-known derivatives:
+          </p>
+          <ul>
+            <li><strong>log(x)</strong>: derivative is 1/x</li>
+            <li><strong>exp(x)</strong>: derivative is exp(x) (it's its own derivative!)</li>
+            <li><strong>relu(x)</strong>: derivative is 1 if x&gt;0, else 0</li>
+          </ul>
+          <p>
+            The "reverse" dunder methods (<code>__radd__</code>, <code>__rmul__</code>, etc.)
+            let Python handle expressions like <code>2 * value</code> where the <code>Value</code>
+            is on the right side. Subtraction and division are defined in terms of addition,
+            negation, and power &mdash; no new gradient rules needed.
+          </p>
+        </div>
+        <div class="content"><pre>
+    <span class="kw">def</span> <span class="fn">log</span>(<span class="slf">self</span>):
+        <span class="kw">return</span> Value(math.log(<span class="slf">self</span>.data),
+                     (<span class="slf">self</span>,), (<span class="nn">1</span>/<span class="slf">self</span>.data,))
+
+    <span class="kw">def</span> <span class="fn">exp</span>(<span class="slf">self</span>):
+        <span class="kw">return</span> Value(math.exp(<span class="slf">self</span>.data),
+                     (<span class="slf">self</span>,), (math.exp(<span class="slf">self</span>.data),))
+
+    <span class="kw">def</span> <span class="fn">relu</span>(<span class="slf">self</span>):
+        <span class="kw">return</span> Value(max(<span class="nn">0</span>, <span class="slf">self</span>.data),
+                     (<span class="slf">self</span>,), (float(<span class="slf">self</span>.data > <span class="nn">0</span>),))
+
+    <span class="kw">def</span> <span class="fn">__neg__</span>(<span class="slf">self</span>):        <span class="kw">return</span> <span class="slf">self</span> * <span class="nn">-1</span>
+    <span class="kw">def</span> <span class="fn">__radd__</span>(<span class="slf">self</span>, o):  <span class="kw">return</span> <span class="slf">self</span> + o
+    <span class="kw">def</span> <span class="fn">__sub__</span>(<span class="slf">self</span>, o):   <span class="kw">return</span> <span class="slf">self</span> + (-o)
+    <span class="kw">def</span> <span class="fn">__rsub__</span>(<span class="slf">self</span>, o):  <span class="kw">return</span> o + (-<span class="slf">self</span>)
+    <span class="kw">def</span> <span class="fn">__rmul__</span>(<span class="slf">self</span>, o):  <span class="kw">return</span> <span class="slf">self</span> * o
+    <span class="kw">def</span> <span class="fn">__truediv__</span>(<span class="slf">self</span>, o):
+        <span class="kw">return</span> <span class="slf">self</span> * o ** <span class="nn">-1</span>
+    <span class="kw">def</span> <span class="fn">__rtruediv__</span>(<span class="slf">self</span>, o):
+        <span class="kw">return</span> o * <span class="slf">self</span> ** <span class="nn">-1</span>
+</pre></div>
+      </li>
+
+      <!-- ======== BACKWARD ======== -->
+      <li id="section-backward">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-backward">&sect;</a></div>
+          <h3>Backward Pass (Backpropagation)</h3>
+          <p>
+            The <code>backward()</code> method implements reverse-mode automatic differentiation.
+            It first builds a <strong>topological sort</strong> of the computation graph
+            (depth-first post-order traversal), then walks backwards through it.
+          </p>
+          <p>
+            For each node, the chain rule says: a child's gradient accumulates
+            <code>local_grad × parent_grad</code>. The <code>+=</code> handles the case
+            where a value is used in multiple operations &mdash; gradients from
+            different paths are summed, which is the multivariate chain rule.
+          </p>
+          <p>
+            This is the exact same algorithm that PyTorch's <code>loss.backward()</code>
+            runs, just without any of the performance engineering.
+          </p>
+        </div>
+        <div class="content"><pre>
+    <span class="kw">def</span> <span class="fn">backward</span>(<span class="slf">self</span>):
+        topo = []
+        visited = set()
+        <span class="kw">def</span> <span class="fn">build_topo</span>(v):
+            <span class="kw">if</span> v <span class="kw">not in</span> visited:
+                visited.add(v)
+                <span class="kw">for</span> child <span class="kw">in</span> v._children:
+                    build_topo(child)
+                topo.append(v)
+        build_topo(<span class="slf">self</span>)
+        <span class="slf">self</span>.grad = <span class="nn">1</span>
+        <span class="kw">for</span> v <span class="kw">in</span> reversed(topo):
+            <span class="kw">for</span> child, local_grad <span class="kw">in</span> \
+                    zip(v._children, v._local_grads):
+                child.grad += local_grad * v.grad
+</pre></div>
+      </li>
+
+      <!-- ======== HYPERPARAMETERS ======== -->
+      <li id="section-hyperparams" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-hyperparams">&sect;</a></div>
+          <h2>Hyperparameters</h2>
+          <p>
+            These define the architecture of our tiny transformer:
+          </p>
+          <ul>
+            <li><strong><code>n_layer = 1</code></strong> &mdash; a single transformer block (GPT-3 has 96)</li>
+            <li><strong><code>n_embd = 16</code></strong> &mdash; each token is a 16-dimensional vector (GPT-2 uses 768)</li>
+            <li><strong><code>block_size = 16</code></strong> &mdash; maximum context window (the longest name is 15 chars)</li>
+            <li><strong><code>n_head = 4</code></strong> &mdash; 4 attention heads, each seeing 4 dimensions</li>
+          </ul>
+          <p>
+            The <code>head_dim</code> is derived: each head gets <code>n_embd / n_head = 4</code>
+            dimensions. Multi-head attention lets the model attend to different positional
+            relationships simultaneously.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Initialize the parameters, to store the</span>
+<span class="cm"># knowledge of the model</span>
+n_layer = <span class="nn">1</span>
+n_embd = <span class="nn">16</span>
+block_size = <span class="nn">16</span>
+n_head = <span class="nn">4</span>
+head_dim = n_embd // n_head
+</pre></div>
+      </li>
+
+      <!-- ======== PARAMETERS ======== -->
+      <li id="section-parameters">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-parameters">&sect;</a></div>
+          <h2>Parameter Initialization</h2>
+          <p>
+            All learnable parameters live in a flat dictionary called <code>state_dict</code>
+            (borrowing PyTorch naming). Each "matrix" is a list of lists of <code>Value</code>
+            objects initialized from a Gaussian distribution with std=0.08.
+          </p>
+          <p>The weight matrices are:</p>
+          <ul>
+            <li><strong><code>wte</code></strong> &mdash; token embeddings (vocab_size × n_embd)</li>
+            <li><strong><code>wpe</code></strong> &mdash; positional embeddings (block_size × n_embd)</li>
+            <li><strong><code>lm_head</code></strong> &mdash; final linear projection back to vocabulary logits</li>
+            <li>Per layer: <strong>Q, K, V, O</strong> attention matrices and a <strong>2-layer MLP</strong> with 4× expansion</li>
+          </ul>
+          <p>
+            Finally, all <code>Value</code> objects are gathered into a single flat list <code>params</code>
+            for the optimizer to iterate over.
+          </p>
+        </div>
+        <div class="content"><pre>
+matrix = <span class="kw">lambda</span> nout, nin, std=<span class="nn">0.08</span>: \
+    [[Value(random.gauss(<span class="nn">0</span>, std))
+      <span class="kw">for</span> _ <span class="kw">in</span> range(nin)]
+     <span class="kw">for</span> _ <span class="kw">in</span> range(nout)]
+
+state_dict = {
+    <span class="st">'wte'</span>:     matrix(vocab_size, n_embd),
+    <span class="st">'wpe'</span>:     matrix(block_size, n_embd),
+    <span class="st">'lm_head'</span>: matrix(vocab_size, n_embd),
+}
+
+<span class="kw">for</span> i <span class="kw">in</span> range(n_layer):
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.attn_wq'</span>] = matrix(n_embd, n_embd)
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.attn_wk'</span>] = matrix(n_embd, n_embd)
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.attn_wv'</span>] = matrix(n_embd, n_embd)
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.attn_wo'</span>] = matrix(n_embd, n_embd)
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.mlp_fc1'</span>] = matrix(<span class="nn">4</span>*n_embd, n_embd)
+    state_dict[<span class="st">f'layer<span class="nb">{</span>i<span class="nb">}</span>.mlp_fc2'</span>] = matrix(n_embd, <span class="nn">4</span>*n_embd)
+
+params = [p <span class="kw">for</span> mat <span class="kw">in</span> state_dict.values()
+            <span class="kw">for</span> row <span class="kw">in</span> mat
+            <span class="kw">for</span> p <span class="kw">in</span> row]
+print(<span class="st">f"num params: <span class="nb">{</span>len(params)<span class="nb">}</span>"</span>)
+</pre></div>
+      </li>
+
+      <!-- ======== BUILDING BLOCKS ======== -->
+      <li id="section-building-blocks" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-building-blocks">&sect;</a></div>
+          <h2>Model Building Blocks</h2>
+          <p>
+            Three small helper functions define the primitive operations used inside the
+            transformer. These follow GPT-2 with minor simplifications (noted by Karpathy):
+            <strong>LayerNorm → RMSNorm</strong>, no biases, and <strong>GeLU → ReLU</strong>.
+          </p>
+          <h3>linear(x, w)</h3>
+          <p>
+            A matrix-vector product. Each row of <code>w</code> is dotted with input <code>x</code>
+            to produce one output element. This is the fundamental operation of neural networks &mdash;
+            a learned linear transformation.
+          </p>
+          <h3>softmax(logits)</h3>
+          <p>
+            Converts raw scores (logits) into a probability distribution that sums to 1.
+            The <code>max_val</code> subtraction is the standard numerical stability trick
+            to prevent overflow in <code>exp()</code>.
+          </p>
+          <h3>rmsnorm(x)</h3>
+          <p>
+            <strong>Root Mean Square Normalization</strong> &mdash; a simpler alternative to LayerNorm
+            that skips the mean-centering step. It divides each element by the RMS of the vector,
+            keeping activations at a controlled scale. The <code>1e-5</code> epsilon prevents division by zero.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Define the model architecture: a function</span>
+<span class="cm"># mapping tokens and parameters to logits</span>
+<span class="cm"># over what comes next.</span>
+<span class="cm">#</span>
+<span class="cm"># Follow GPT-2, blessed among the GPTs, with</span>
+<span class="cm"># minor differences: layernorm -> rmsnorm,</span>
+<span class="cm"># no biases, GeLU -> ReLU</span>
+
+<span class="kw">def</span> <span class="fn">linear</span>(x, w):
+    <span class="kw">return</span> [sum(wi * xi <span class="kw">for</span> wi, xi <span class="kw">in</span> zip(wo, x))
+            <span class="kw">for</span> wo <span class="kw">in</span> w]
+
+<span class="kw">def</span> <span class="fn">softmax</span>(logits):
+    max_val = max(val.data <span class="kw">for</span> val <span class="kw">in</span> logits)
+    exps = [(val - max_val).exp() <span class="kw">for</span> val <span class="kw">in</span> logits]
+    total = sum(exps)
+    <span class="kw">return</span> [e / total <span class="kw">for</span> e <span class="kw">in</span> exps]
+
+<span class="kw">def</span> <span class="fn">rmsnorm</span>(x):
+    ms = sum(xi * xi <span class="kw">for</span> xi <span class="kw">in</span> x) / len(x)
+    scale = (ms + <span class="nn">1e-5</span>) ** <span class="nn">-0.5</span>
+    <span class="kw">return</span> [xi * scale <span class="kw">for</span> xi <span class="kw">in</span> x]
+</pre></div>
+      </li>
+
+      <!-- ======== GPT FORWARD ======== -->
+      <li id="section-gpt-forward">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-gpt-forward">&sect;</a></div>
+          <h2>GPT Forward Pass</h2>
+          <p>
+            This is the core function — it takes a single token and its position,
+            and produces logits (unnormalized scores) over the entire vocabulary
+            for what token comes next.
+          </p>
+          <p>
+            The function operates in <strong>autoregressive / KV-cache mode</strong>:
+            it processes one token at a time and accumulates past keys and values
+            in the <code>keys</code> and <code>values</code> lists. This is exactly
+            how production LLMs generate text token-by-token.
+          </p>
+          <p>
+            <strong>Step 1: Embedding.</strong> Look up the token embedding and
+            positional embedding, then add them element-wise. This gives the model
+            both <em>what</em> the token is and <em>where</em> it is in the sequence.
+            An initial RMSNorm is applied &mdash; not redundant because gradients
+            flow back through the residual connections.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="kw">def</span> <span class="fn">gpt</span>(token_id, pos_id, keys, values):
+    <span class="cm"># token embedding</span>
+    tok_emb = state_dict[<span class="st">'wte'</span>][token_id]
+    <span class="cm"># position embedding</span>
+    pos_emb = state_dict[<span class="st">'wpe'</span>][pos_id]
+    <span class="cm"># joint token and position embedding</span>
+    x = [t + p <span class="kw">for</span> t, p <span class="kw">in</span> zip(tok_emb, pos_emb)]
+    <span class="cm"># note: not redundant due to backward pass</span>
+    <span class="cm"># via the residual connection</span>
+    x = rmsnorm(x)
+</pre></div>
+      </li>
+
+      <!-- ======== ATTENTION ======== -->
+      <li id="section-attention">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-attention">&sect;</a></div>
+          <h3>Multi-Head Attention</h3>
+          <p>
+            For each layer, the normalized input is projected into
+            <strong>queries</strong>, <strong>keys</strong>, and <strong>values</strong>
+            via three separate linear transformations. The keys and values are cached
+            for future tokens (the KV cache).
+          </p>
+          <p>
+            The attention mechanism then runs independently for each head:
+          </p>
+          <ol>
+            <li>Slice Q, K, V into per-head chunks of size <code>head_dim</code></li>
+            <li>Compute attention scores: <code>Q·K<sup>T</sup> / √d</code></li>
+            <li>Apply softmax to get attention weights (how much to attend to each past position)</li>
+            <li>Weighted sum of values produces the head's output</li>
+          </ol>
+          <p>
+            The <code>/ head_dim**0.5</code> scaling prevents dot products from growing too
+            large with dimensionality, which would push softmax into saturation.
+          </p>
+          <p>
+            The concatenated head outputs pass through <code>attn_wo</code> (the output
+            projection) and are added back to the input via a <strong>residual connection</strong> &mdash;
+            the key innovation that makes deep transformers trainable.
+          </p>
+        </div>
+        <div class="content"><pre>
+    <span class="kw">for</span> li <span class="kw">in</span> range(n_layer):
+        <span class="cm"># 1) Multi-head Attention block</span>
+        x_residual = x
+        x = rmsnorm(x)
+        q = linear(x, state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.attn_wq'</span>])
+        k = linear(x, state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.attn_wk'</span>])
+        v = linear(x, state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.attn_wv'</span>])
+        keys[li].append(k)
+        values[li].append(v)
+
+        x_attn = []
+        <span class="kw">for</span> h <span class="kw">in</span> range(n_head):
+            hs = h * head_dim
+            q_h = q[hs:hs+head_dim]
+            k_h = [ki[hs:hs+head_dim] <span class="kw">for</span> ki <span class="kw">in</span> keys[li]]
+            v_h = [vi[hs:hs+head_dim] <span class="kw">for</span> vi <span class="kw">in</span> values[li]]
+
+            attn_logits = [
+                sum(q_h[j] * k_h[t][j]
+                    <span class="kw">for</span> j <span class="kw">in</span> range(head_dim))
+                / head_dim ** <span class="nn">0.5</span>
+                <span class="kw">for</span> t <span class="kw">in</span> range(len(k_h))
+            ]
+            attn_weights = softmax(attn_logits)
+            head_out = [
+                sum(attn_weights[t] * v_h[t][j]
+                    <span class="kw">for</span> t <span class="kw">in</span> range(len(v_h)))
+                <span class="kw">for</span> j <span class="kw">in</span> range(head_dim)
+            ]
+            x_attn.extend(head_out)
+
+        x = linear(x_attn,
+                    state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.attn_wo'</span>])
+        x = [a + b <span class="kw">for</span> a, b <span class="kw">in</span> zip(x, x_residual)]
+</pre></div>
+      </li>
+
+      <!-- ======== MLP ======== -->
+      <li id="section-mlp">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-mlp">&sect;</a></div>
+          <h3>Feed-Forward (MLP) Block</h3>
+          <p>
+            After attention, the transformer applies a position-wise feed-forward network.
+            This is a classic two-layer MLP with:
+          </p>
+          <ol>
+            <li>RMSNorm on the input</li>
+            <li>Linear projection expanding from <code>n_embd</code> → <code>4 × n_embd</code></li>
+            <li>ReLU activation (GPT-2 uses GeLU, but ReLU keeps things simple)</li>
+            <li>Linear projection compressing back: <code>4 × n_embd</code> → <code>n_embd</code></li>
+            <li>Another residual connection</li>
+          </ol>
+          <p>
+            The 4× expansion ratio is standard in transformers. It gives the network more
+            capacity to learn complex non-linear transformations at each position.
+          </p>
+          <p>
+            After all layers, the final <code>lm_head</code> linear projection maps from
+            the embedding dimension back to vocabulary size, producing one logit per token
+            in the vocabulary.
+          </p>
+        </div>
+        <div class="content"><pre>
+        <span class="cm"># 2) MLP block</span>
+        x_residual = x
+        x = rmsnorm(x)
+        x = linear(x, state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.mlp_fc1'</span>])
+        x = [xi.relu() <span class="kw">for</span> xi <span class="kw">in</span> x]
+        x = linear(x, state_dict[<span class="st">f'layer<span class="nb">{</span>li<span class="nb">}</span>.mlp_fc2'</span>])
+        x = [a + b <span class="kw">for</span> a, b <span class="kw">in</span> zip(x, x_residual)]
+
+    logits = linear(x, state_dict[<span class="st">'lm_head'</span>])
+    <span class="kw">return</span> logits
+</pre></div>
+      </li>
+
+      <!-- ======== OPTIMIZER ======== -->
+      <li id="section-optimizer" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-optimizer">&sect;</a></div>
+          <h2>Adam Optimizer</h2>
+          <p>
+            <a href="https://arxiv.org/abs/1412.6980">Adam</a> (Adaptive Moment Estimation)
+            is the standard optimizer for training transformers. It maintains two buffers per parameter:
+          </p>
+          <ul>
+            <li><strong><code>m</code></strong> &mdash; first moment (exponential moving average of gradients, like momentum)</li>
+            <li><strong><code>v</code></strong> &mdash; second moment (exponential moving average of squared gradients, for per-parameter learning rate scaling)</li>
+          </ul>
+          <p>
+            The hyperparameters:
+          </p>
+          <ul>
+            <li><code>lr = 0.01</code> &mdash; base learning rate (quite aggressive; works for this tiny model)</li>
+            <li><code>β₁ = 0.85</code> &mdash; momentum decay (typical is 0.9)</li>
+            <li><code>β₂ = 0.99</code> &mdash; second moment decay (typical is 0.999)</li>
+            <li><code>ε = 1e-8</code> &mdash; prevents division by zero</li>
+          </ul>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Let there be Adam, the blessed optimizer</span>
+<span class="cm"># and its buffers</span>
+learning_rate = <span class="nn">0.01</span>
+beta1, beta2, eps_adam = <span class="nn">0.85</span>, <span class="nn">0.99</span>, <span class="nn">1e-8</span>
+m = [<span class="nn">0.0</span>] * len(params)  <span class="cm"># first moment</span>
+v = [<span class="nn">0.0</span>] * len(params)  <span class="cm"># second moment</span>
+</pre></div>
+      </li>
+
+      <!-- ======== TRAINING LOOP ======== -->
+      <li id="section-training-loop">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-training-loop">&sect;</a></div>
+          <h2>Training Loop</h2>
+          <p>
+            The training loop is strikingly simple &mdash; 1000 steps, one document per step
+            (batch size = 1). For each step:
+          </p>
+          <ol>
+            <li><strong>Tokenize</strong> a name, wrapping it with BOS tokens on both sides</li>
+            <li><strong>Forward pass</strong>: feed tokens one by one through the GPT, predicting each next token</li>
+            <li><strong>Compute loss</strong>: cross-entropy (negative log probability of the correct next token)</li>
+            <li><strong>Backward pass</strong>: compute all gradients via autograd</li>
+            <li><strong>Update</strong>: apply Adam optimizer to all parameters</li>
+          </ol>
+          <p>
+            The forward loop processes tokens autoregressively: at each position, the model
+            sees all previous tokens (via the KV cache) and predicts the next one.
+            The loss is the average negative log-likelihood across all positions.
+          </p>
+          <p>
+            <em>"May yours be low."</em> &mdash; a fitting prayer for any loss function.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Repeat in sequence</span>
+num_steps = <span class="nn">1000</span>
+<span class="kw">for</span> step <span class="kw">in</span> range(num_steps):
+
+    <span class="cm"># Take single document, tokenize it,</span>
+    <span class="cm"># surround it with BOS on both sides</span>
+    doc = docs[step % len(docs)]
+    tokens = [BOS] + \
+             [uchars.index(ch) <span class="kw">for</span> ch <span class="kw">in</span> doc] + \
+             [BOS]
+    n = min(block_size, len(tokens) - <span class="nn">1</span>)
+
+    <span class="cm"># Forward the token sequence through the model,</span>
+    <span class="cm"># building up the computation graph all the</span>
+    <span class="cm"># way to the loss</span>
+    keys = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)]
+    values = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)]
+    losses = []
+    <span class="kw">for</span> pos_id <span class="kw">in</span> range(n):
+        token_id = tokens[pos_id]
+        target_id = tokens[pos_id + <span class="nn">1</span>]
+        logits = gpt(token_id, pos_id, keys, values)
+        probs = softmax(logits)
+        loss_t = -probs[target_id].log()
+        losses.append(loss_t)
+    <span class="cm"># final average loss over the document</span>
+    <span class="cm"># May yours be low.</span>
+    loss = (<span class="nn">1</span> / n) * sum(losses)
+
+    <span class="cm"># Backward the loss, calculating the gradients</span>
+    <span class="cm"># w.r.t. all model parameters</span>
+    loss.backward()
+</pre></div>
+      </li>
+
+      <!-- ======== ADAM UPDATE ======== -->
+      <li id="section-adam-update">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-adam-update">&sect;</a></div>
+          <h3>Adam Update Step</h3>
+          <p>
+            After backpropagation, every <code>Value</code> in <code>params</code> has a
+            <code>.grad</code> attribute with the gradient of the loss with respect to
+            that parameter. The Adam update rule is:
+          </p>
+          <ol>
+            <li>Update first moment: <code>m = β₁·m + (1-β₁)·grad</code></li>
+            <li>Update second moment: <code>v = β₂·v + (1-β₂)·grad²</code></li>
+            <li>Bias-correct both: <code>m̂ = m/(1-β₁<sup>t</sup>)</code>, <code>v̂ = v/(1-β₂<sup>t</sup>)</code></li>
+            <li>Update parameter: <code>θ -= lr · m̂ / (√v̂ + ε)</code></li>
+          </ol>
+          <p>
+            A <strong>linear learning rate decay</strong> schedule is applied:
+            the learning rate ramps down to zero over the course of training.
+            Each parameter's gradient is reset to zero after the update, ready for
+            the next forward-backward pass.
+          </p>
+        </div>
+        <div class="content"><pre>
+    <span class="cm"># Adam optimizer update: update model parameters</span>
+    <span class="cm"># based on the corresponding gradients</span>
+    lr_t = learning_rate * (<span class="nn">1</span> - step / num_steps)
+    <span class="kw">for</span> i, p <span class="kw">in</span> enumerate(params):
+        m[i] = beta1 * m[i] + (<span class="nn">1</span> - beta1) * p.grad
+        v[i] = beta2 * v[i] + (<span class="nn">1</span> - beta2) * p.grad ** <span class="nn">2</span>
+        m_hat = m[i] / (<span class="nn">1</span> - beta1 ** (step + <span class="nn">1</span>))
+        v_hat = v[i] / (<span class="nn">1</span> - beta2 ** (step + <span class="nn">1</span>))
+        p.data -= lr_t * m_hat / (v_hat ** <span class="nn">0.5</span> + eps_adam)
+        p.grad = <span class="nn">0</span>
+
+    print(<span class="st">f"step <span class="nb">{</span>step+1:4d<span class="nb">}</span> / <span class="nb">{</span>num_steps:4d<span class="nb">}</span> | "</span>
+          <span class="st">f"loss <span class="nb">{</span>loss.data:.4f<span class="nb">}</span>"</span>, end=<span class="st">'\r'</span>)
+</pre></div>
+      </li>
+
+      <!-- ======== INFERENCE ======== -->
+      <li id="section-inference" class="section-header">
+        <div class="annotation">
+          <div class="sswrap"><a class="ss" href="#section-inference">&sect;</a></div>
+          <h2>Inference</h2>
+          <p>
+            After training, the model generates new names that don't exist in
+            the training set &mdash; <em>hallucinated</em> names, in a delightful use
+            of the term.
+          </p>
+          <p>
+            Generation is autoregressive: start with BOS, sample a token from the
+            predicted distribution, feed it back in, repeat until BOS appears again
+            (or we hit the maximum context length).
+          </p>
+          <p>
+            The <strong>temperature</strong> parameter controls creativity:
+          </p>
+          <ul>
+            <li><code>temperature → 0</code>: always picks the most likely token (deterministic, repetitive)</li>
+            <li><code>temperature = 1</code>: samples from the raw learned distribution</li>
+            <li><code>temperature > 1</code>: flattens the distribution (more random, more "creative")</li>
+          </ul>
+          <p>
+            Here <code>temperature = 0.5</code> gives a nice balance: the names sound plausible
+            but are novel. The logits are divided by temperature <em>before</em> softmax,
+            which sharpens or flattens the probability distribution.
+          </p>
+          <p>
+            <code>random.choices</code> does weighted sampling from the vocabulary based on
+            the model's predicted probabilities.
+          </p>
+          <p style="margin-top:20px; padding-top:14px; border-top:1px solid #eee; font-size:13px; color:#999;">
+            And that's it &mdash; a complete GPT, from autograd to attention to Adam, in ~120 lines of pure Python.
+            Everything else in modern deep learning is, as Karpathy says, <em>just efficiency</em>.
+          </p>
+        </div>
+        <div class="content"><pre>
+<span class="cm"># Inference: may the model babble back to us</span>
+temperature = <span class="nn">0.5</span>
+print(<span class="st">"\n--- inference (new, hallucinated names) ---"</span>)
+<span class="kw">for</span> sample_idx <span class="kw">in</span> range(<span class="nn">20</span>):
+    keys = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)]
+    values = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)]
+    token_id = BOS
+    sample = []
+    <span class="kw">for</span> pos_id <span class="kw">in</span> range(block_size):
+        logits = gpt(token_id, pos_id, keys, values)
+        probs = softmax(
+            [l / temperature <span class="kw">for</span> l <span class="kw">in</span> logits]
+        )
+        token_id = random.choices(
+            range(vocab_size),
+            weights=[p.data <span class="kw">for</span> p <span class="kw">in</span> probs]
+        )[<span class="nn">0</span>]
+        <span class="kw">if</span> token_id == BOS:
+            <span class="kw">break</span>
+        sample.append(uchars[token_id])
+    print(<span class="st">f"sample <span class="nb">{</span>sample_idx+1:2d<span class="nb">}</span>: <span class="nb">{</span><span class="st">''</span>.join(sample)<span class="nb">}</span>"</span>)
+</pre></div>
+      </li>
+
+    </ul>
+  </div>
+</body>
+</html>
