@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Rubik Muse — Scramble & Solve</title>
+<link rel="preconnect" href="https://unpkg.com">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap');
+  :root{
+    --bg:#101015;
+    --panel:#1a1a22;
+    --line:#2a2a35;
+    --text:#f6f5f0;
+    --muted:#9a9ab0;
+    --accent:#7cfb7c;
+    --red:#ff3b3b; --blue:#2d7ff9; --green:#00d26a; --yellow:#ffde59; --orange:#ff8a2b; --white:#ffffff;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;background:radial-gradient(1200px 800px at 70% -10%, #1d1d2a 0%, #101015 55%, #0a0a0e 100%);overflow:hidden; font-family:"Space Grotesk",system-ui,sans-serif; color:var(--text)}
+  canvas{display:block;width:100%;height:100%}
+  #stage{position:fixed;inset:0}
+  /* UI */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:10;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px; pointer-events:none;
+  }
+  .brand{
+    display:flex; gap:12px; align-items:center; pointer-events:auto;
+  }
+  .logo{
+    width:36px; height:36px; border-radius:10px;
+    background: conic-gradient(from 0deg, var(--red), var(--yellow), var(--green), var(--blue), var(--orange), var(--red));
+    box-shadow: 0 0 0 1px #ffffff18 inset, 0 8px 24px #0008;
+    display:grid; place-items:center; font-weight:700; letter-spacing:-.02em;
+  }
+  .logo span{background:#101015; width:26px;height:26px; display:grid;place-items:center; border-radius:7px; font-size:13px}
+  .title{line-height:1}
+  .title b{display:block; font-size:16px; letter-spacing:-.02em}
+  .title i{display:block; font-style:normal; font-family:"JetBrains Mono",mono; font-size:11px; color:var(--muted); margin-top:2px; letter-spacing:.08em; text-transform:uppercase}
+  .status{
+    pointer-events:auto;
+    font-family:"JetBrains Mono",mono; font-size:12px;
+    background:#16161e; border:1px solid var(--line);
+    padding:8px 12px; border-radius:999px; display:flex; gap:8px; align-items:center;
+    box-shadow:0 8px 30px #0006;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent); box-shadow:0 0 12px var(--accent)}
+  .dot.scrambled{background:var(--yellow); box-shadow:0 0 12px var(--yellow)}
+  .dot.animating{background:var(--blue); box-shadow:0 0 12px var(--blue); animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+  .controls{
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+    z-index:10; display:flex; gap:12px; align-items:center;
+    padding:10px; border-radius:22px;
+    background:linear-gradient(180deg, #ffffff08, #00000030);
+    border:1px solid #ffffff14;
+    backdrop-filter: blur(16px) saturate(1.2);
+    box-shadow: 0 20px 60px #000a, 0 0 0 1px #ffffff0a inset;
+  }
+  .btn{
+    appearance:none; border:0; cursor:pointer;
+    font-family:"Space Grotesk",sans-serif; font-weight:700; letter-spacing:-.01em;
+    font-size:14px; padding:13px 22px; border-radius:14px;
+    transition:.18s transform, .18s filter, .18s opacity, .18s box-shadow;
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+    box-shadow: 0 6px 18px #0006, 0 0 0 1px #ffffff14 inset;
+    user-select:none;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn:disabled{opacity:.45; cursor:not-allowed; filter:grayscale(.3)}
+  .btn-scramble{
+    background:linear-gradient(180deg, #fff, #e9e9ef);
+    color:#121212;
+  }
+  .btn-solve{
+    background:linear-gradient(180deg, #7cfb7c, #3ae83a);
+    color:#0a1a0a;
+    box-shadow: 0 10px 24px #3ae83a55, 0 0 0 1px #ffffff22 inset;
+  }
+  .btn-ghost{
+    background:#1e1e28; color:var(--text);
+    font-size:13px; padding:12px 14px;
+  }
+  .hint{
+    position:fixed; left:20px; bottom:20px; z-index:9;
+    font-family:"JetBrains Mono",mono; font-size:11px; color:#ffffff66;
+    line-height:1.5; max-width:200px;
+  }
+  @media (max-width:640px){
+    .hint{display:none}
+    .controls{bottom:14px; padding:8px; gap:8px; width:calc(100% - 20px); justify-content:center}
+    .btn{flex:1; justify-content:center; padding:14px 12px}
+  }
+  /* color legend */
+  .legend{
+    position:fixed; right:18px; top:70px; z-index:9;
+    display:flex; flex-direction:column; gap:6px;
+    font-family:"JetBrains Mono",mono; font-size:10px; color:#ffffff70;
+  }
+  .legend span{display:flex; align-items:center; gap:8px}
+  .legend i{width:12px; height:12px; border-radius:3px; display:inline-block; box-shadow:0 0 0 1px #ffffff18 inset}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="logo"><span>3×3</span></div>
+    <div class="title">
+      <b>Rubik Muse</b>
+      <i>Three.js • Animated Layers • Reversible Shuffle</i>
+    </div>
+  </div>
+  <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">SOLVED</span></div>
+</div>
+
+<div class="legend">
+  <span><i style="background:#ff3b3b"></i> R — Red</span>
+  <span><i style="background:#ff8a2b"></i> L — Orange</span>
+  <span><i style="background:white"></i> U — White</span>
+  <span><i style="background:#ffde59"></i> D — Yellow</span>
+  <span><i style="background:#00d26a"></i> F — Green</span>
+  <span><i style="background:#2d7ff9"></i> B — Blue</span>
+</div>
+
+<div class="hint">Drag to orbit • Scroll to zoom • Right-drag to pan<br>Each cubie is a real mesh; layer rotation bakes position & orientation</div>
+
+<div class="controls">
+  <button class="btn btn-ghost" id="btnReset" title="Instant reset">↺ Reset</button>
+  <button class="btn btn-scramble" id="btnScramble">🎲 Scramble</button>
+  <button class="btn btn-solve" id="btnSolve">✨ Solve</button>
+</div>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// Scene
+const container = document.getElementById('stage');
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x101015, 12, 26);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(5.2,4.6,4.8);
+
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 3.5;
+controls.maxDistance = 14;
+controls.target.set(0,0,0);
+controls.update();
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(6,10,7);
+dir.castShadow = true;
+dir.shadow.mapSize.set(2048,2048);
+dir.shadow.camera.near=0.5; dir.shadow.camera.far=20;
+dir.shadow.camera.left=-6; dir.shadow.camera.right=6; dir.shadow.camera.top=6; dir.shadow.camera.bottom=-6;
+dir.shadow.bias = -0.00015;
+scene.add(dir);
+const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
+fill.position.set(-5,2,-6);
+scene.add(fill);
+const point = new THREE.PointLight(0xffde59, 0.6, 10);
+point.position.set(0,4,0);
+scene.add(point);
+
+// Ground shadow catcher
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(30,30),
+  new THREE.ShadowMaterial({opacity:0.22})
+);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -2.2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Rubik's cube logic
+const CUBE_SIZE = 1;
+const GAP = 0.06;
+
+const COLORS = {
+  px: 0xff3b3b, // R
+  nx: 0xff8a2b, // L
+  py: 0xffffff, // U
+  ny: 0xffde59, // D
+  pz: 0x00d26a, // F
+  nz: 0x2d7ff9, // B
+  inner: 0x121218
+};
+
+// Materials helpers
+function stickerMat(color){
+  return new THREE.MeshStandardMaterial({
+    color: color===COLORS.inner? 0x121218 : color,
+    roughness: color===COLORS.inner? 0.9 : 0.32,
+    metalness: 0.02,
+    emissive: color===COLORS.inner? 0x000000 : color,
+    emissiveIntensity: color===COLORS.inner?0:0.05
+  });
+}
+
+class Cubie {
+  constructor(x,y,z){
+    this.basePos = new THREE.Vector3(x,y,z);
+    this.pos = new THREE.Vector3(x,y,z); // logical integer pos
+
+    // Group that will hold the mesh, so rotation bakes correctly
+    this.group = new THREE.Group();
+    this.group.position.copy(this.basePos).multiplyScalar(CUBE_SIZE+GAP);
+
+    // Actual box
+    const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE, 1,1,1);
+    // Roundness illusion: use materials per face
+    const mats = [
+      x===1 ? stickerMat(COLORS.px) : stickerMat(COLORS.inner), // +x
+      x===-1 ? stickerMat(COLORS.nx) : stickerMat(COLORS.inner), // -x
+      y===1 ? stickerMat(COLORS.py) : stickerMat(COLORS.inner), // +y
+      y===-1 ? stickerMat(COLORS.ny) : stickerMat(COLORS.inner), // -y
+      z===1 ? stickerMat(COLORS.pz) : stickerMat(COLORS.inner), // +z
+      z===-1 ? stickerMat(COLORS.nz) : stickerMat(COLORS.inner), // -z
+    ];
+    // The order for BoxGeometry is +x, -x, +y, -y, +z, -z
+
+    const mesh = new THREE.Mesh(geo, mats);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    // add bevel-like edge lines
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({color:0x000000, transparent:true, opacity:0.28})
+    );
+    mesh.add(edges);
+
+    this.mesh = mesh;
+    this.group.add(mesh);
+    scene.add(this.group);
+  }
+  // Update logical pos after baked rotation
+  syncFromWorld(){
+    // pos is derived from group.position normalized
+    const p = this.group.position.clone().divideScalar(CUBE_SIZE+GAP);
+    this.pos.set(Math.round(p.x), Math.round(p.y), Math.round(p.z));
+    // snap group position to integer grid to avoid drift
+    this.group.position.set(
+      this.pos.x*(CUBE_SIZE+GAP),
+      this.pos.y*(CUBE_SIZE+GAP),
+      this.pos.z*(CUBE_SIZE+GAP)
+    );
+    // bake rotation: keep quaternion
+    // we don't reset, we keep it so orientation persists
+  }
+}
+
+let cubies = [];
+function buildCube(){
+  // clear
+  for(let c of cubies){ scene.remove(c.group); }
+  cubies=[];
+  for(let x=-1;x<=1;x++) for(let y=-1;y<=1;y++) for(let z=-1;z<=1;z++){
+    if(x===0 && y===0 && z===0) continue; // invisible core
+    cubies.push(new Cubie(x,y,z));
+  }
+}
+buildCube();
+
+// Rotation system
+let isAnimating = false;
+let moveQueue = [];
+let historyStack = []; // for solving by reverse
+
+const ANIM_DURATION = 280; // ms per quarter turn
+
+function getLayer(axis, value){
+  return cubies.filter(c=> c.pos[axis]===value);
+}
+
+function rotateLayer(axis, layerValue, angleRad){
+  return new Promise(resolve=>{
+    if(Math.abs(angleRad) < 0.001){ resolve(); return; }
+    isAnimating = true;
+    const layer = getLayer(axis, layerValue);
+    const pivot = new THREE.Group();
+    pivot.position.set(0,0,0);
+    scene.add(pivot);
+
+    // attach to pivot
+    for(let cubie of layer){
+      // Need world matrix preserved
+      // Since groups are at grid positions, simple reparent works if pivot at 0
+      scene.remove(cubie.group);
+      pivot.add(cubie.group);
+      // position already relative to scene, which is same as pivot child at origin
+      // But cubie.group position is already offset; pivot rotation will rotate around origin correctly
+    }
+
+    const start = performance.now();
+    const initialRot = pivot.rotation[axis];
+    let animId = 0;
+    const animate = (now)=>{
+      const t = Math.min(1, (now-start)/ANIM_DURATION);
+      // ease in-out cubic
+      const ease = t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+      const curAngle = initialRot + angleRad*ease;
+      if(axis==='x') pivot.rotation.x = curAngle;
+      if(axis==='y') pivot.rotation.y = curAngle;
+      if(axis==='z') pivot.rotation.z = curAngle;
+
+      if(t<1){
+        animId = requestAnimationFrame(animate);
+      }else{
+        // finalize
+        // bake pivot transform into cubies
+        pivot.updateMatrixWorld(true);
+        for(let cubie of layer){
+          // get world quaternion/position
+          const worldQuat = new THREE.Quaternion();
+          const worldPos = new THREE.Vector3();
+          cubie.group.getWorldQuaternion(worldQuat);
+          cubie.group.getWorldPosition(worldPos);
+
+          // reparent back to scene
+          pivot.remove(cubie.group);
+          scene.add(cubie.group);
+          cubie.group.position.copy(worldPos);
+          cubie.group.quaternion.copy(worldQuat);
+          cubie.syncFromWorld();
+        }
+        scene.remove(pivot);
+        isAnimating = false;
+        resolve();
+      }
+    };
+    requestAnimationFrame(animate);
+  });
+}
+
+// Move definitions: standard cube notation (looking at face, clockwise)
+const MOVES = {
+  'R':  {axis:'x', layer:1,  angle:-Math.PI/2},
+  "R'": {axis:'x', layer:1,  angle: Math.PI/2},
+  'L':  {axis:'x', layer:-1, angle: Math.PI/2},
+  "L'": {axis:'x', layer:-1, angle:-Math.PI/2},
+  'U':  {axis:'y', layer:1,  angle:-Math.PI/2},
+  "U'": {axis:'y', layer:1,  angle: Math.PI/2},
+  'D':  {axis:'y', layer:-1, angle: Math.PI/2},
+  "D'": {axis:'y', layer:-1, angle:-Math.PI/2},
+  'F':  {axis:'z', layer:1,  angle:-Math.PI/2},
+  "F'": {axis:'z', layer:1,  angle: Math.PI/2},
+  'B':  {axis:'z', layer:-1, angle: Math.PI/2},
+  "B'": {axis:'z', layer:-1, angle:-Math.PI/2},
+};
+
+function invertMove(m){
+  // m is object like {axis, layer, angle, name}
+  if(m.name && MOVES[m.name]){
+    // invert name
+    const invName = m.name.includes("'") ? m.name[0] : m.name+"'";
+    const inv = MOVES[invName];
+    return {...inv, name:invName, axis:inv.axis, layer:inv.layer, angle:inv.angle};
+  }
+  return {...m, angle:-m.angle, name:(m.name? m.name+"'" : undefined)};
+}
+
+async function playMoves(moves, {recordHistory=true, mode='play'}={}){
+  if(isAnimating) return;
+  // lock buttons
+  setButtonsDisabled(true);
+  setStatus(mode==='scramble'?'SCRAMBLING': mode==='solve'?'SOLVING':'MOVING', 'animating');
+  for(let mv of moves){
+    const def = typeof mv === 'string' ? MOVES[mv] : mv;
+    const axis = def.axis;
+    const layer = def.layer;
+    const angle = def.angle;
+    await rotateLayer(axis, layer, angle);
+    if(recordHistory){
+      // store normalized move
+      const record = typeof mv === 'string' ? { ...def, name: mv } : mv;
+      historyStack.push(record);
+    }
+  }
+  setButtonsDisabled(false);
+  updateStatusLabel();
+}
+
+let scrambleHistory = [];
+
+function randomMoves(count=20){
+  const faces = ['R','L','U','D','F','B'];
+  const all = [];
+  for(let i=0;i<count;i++){
+    let f, prime;
+    // avoid same face twice in a row and avoid same axis thrashing
+    do{
+      f = faces[Math.floor(Math.random()*faces.length)];
+    }while(all.length && all[all.length-1][0]===f);
+    prime = Math.random()<0.5;
+    const name = prime? f+"'" : f;
+    all.push(name);
+  }
+  return all;
+}
+
+// Button handlers
+const btnScramble = document.getElementById('btnScramble');
+const btnSolve = document.getElementById('btnSolve');
+const btnReset = document.getElementById('btnReset');
+const statusText = document.getElementById('statusText');
+const dot = document.getElementById('dot');
+
+function setButtonsDisabled(v){
+  btnScramble.disabled = v;
+  btnSolve.disabled = v;
+  btnReset.disabled = false; // reset always allowed? disable during anim for safety
+  if(v) btnReset.disabled = true;
+}
+function setStatus(txt, cls){
+  statusText.textContent = txt;
+  dot.className = 'dot ' + (cls||'');
+}
+function updateStatusLabel(){
+  if(historyStack.length===0){
+    setStatus('SOLVED','');
+  }else{
+    setStatus(`SCRAMBLED • ${historyStack.length} moves`, 'scrambled');
+  }
+}
+
+btnScramble.addEventListener('click', async ()=>{
+  const moves = randomMoves(22);
+  scrambleHistory = moves.map(n=>MOVES[n]); // for debugging
+  // we want to play them and keep them in historyStack
+  // clear previous? keep appending for cumulative scramble
+  await playMoves(moves, {recordHistory:true, mode:'scramble'});
+  // store copy for solve button if user scrambles multiple times, we want to be able to solve entire stack
+});
+
+btnSolve.addEventListener('click', async ()=>{
+  if(historyStack.length===0) return;
+  // Build reverse
+  const reverse = [...historyStack].reverse().map(m=> invertMove(m));
+  // Clear history before playing reverse, so after solve history is empty
+  historyStack = [];
+  await playMoves(reverse, {recordHistory:false, mode:'solve'});
+  updateStatusLabel();
+});
+
+btnReset.addEventListener('click', ()=>{
+  // Instant reset without animation for speed
+  buildCube();
+  historyStack=[];
+  scrambleHistory=[];
+  updateStatusLabel();
+  setStatus('SOLVED','');
+});
+
+// Initial animation: playful entry
+(function entryAnim(){
+  scene.scale.set(0.001,0.001,0.001);
+  let s=0.001;
+  const tick=()=>{
+    s += (1-s)*0.08;
+    scene.scale.setScalar(s);
+    if(s<0.999) requestAnimationFrame(tick);
+    else scene.scale.setScalar(1);
+  };
+  tick();
+})();
+
+// Render loop
+function render(){
+  requestAnimationFrame(render);
+  controls.update();
+  renderer.render(scene,camera);
+}
+render();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+// Keyboard shortcuts (secret)
+addEventListener('keydown',(e)=>{
+  if(isAnimating) return;
+  const k = e.key.toUpperCase();
+  if(['R','L','U','D','F','B'].includes(k)){
+    const prime = e.shiftKey;
+    const name = prime? k+"'" : k;
+    playMoves([name], {recordHistory:true, mode:'play'});
+  }
+});
+</script>
+</body>
+</html>
