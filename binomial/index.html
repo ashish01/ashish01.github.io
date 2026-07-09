@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(a+b)² to (x₁+...+xₙ)² — Area Proof | 3Blue1Brown Style</title>
+<meta name="description" content="A Manim animation (3Blue1Brown style) that proves (a+b)² = a²+b²+2ab with area, extends to (a+b+c)² and the general pattern (x₁+...+xₙ)² = Σxᵢ² + 2Σxᵢxⱼ. Made for teaching.">
+<meta property="og:title" content="(a+b)² to (x₁+...+xₙ)² — Visual Area Proof">
+<meta property="og:description" content="From (a+b)² to (a+b+c)² to the general pattern — all area, no algebra. Manim video made for my son.">
+<meta property="og:type" content="video.other">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fcf9f2;
+    --paper-2:#f6efe3;
+    --ink:#1e2935;
+    --ink-2:#5a6b7d;
+    --ink-3:#9aa8b6;
+    --rule:#e8ddd0;
+    --a:#4f7cac;
+    --b:#e07a5f;
+    --c:#c19a3a;
+    --ab:#5a9a7a;
+    --shadow:0 20px 60px rgba(30,41,53,0.12), 0 2px 10px rgba(30,41,53,0.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"Geist Mono",monospace}
+  .serif{font-family:"Instrument Serif",Georgia,serif}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 22px 80px}
+  header{border-bottom:1.5px solid var(--rule);padding-bottom:24px;margin-bottom:28px}
+  header h1{font-family:"Instrument Serif",serif;font-weight:400;font-size:42px;line-height:0.95;letter-spacing:-0.02em;margin:0 0 12px}
+  header h1 span{color:var(--ink-3)}
+  header .sub{font-size:14.5px;line-height:1.6;color:var(--ink-2);max-width:620px}
+  header .sub strong{color:var(--ink);font-weight:600}
+  .video-card{
+    background:var(--paper-2);border:1.5px solid var(--rule);border-radius:18px;padding:14px;box-shadow:var(--shadow);margin-bottom:28px
+  }
+  .video-frame{
+    background:black;border-radius:12px;overflow:hidden;border:1px solid var(--rule);aspect-ratio:16/9;
+  }
+  video{width:100%;height:100%;display:block}
+  .meta-bar{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-top:12px;padding:0 2px
+  }
+  .meta-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:white;border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--ink-2)}
+  .chip i{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .btn{
+    appearance:none;border:1px solid var(--ink);background:var(--ink);color:white;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center
+  }
+  .btn.secondary{background:white;color:var(--ink);border-color:var(--rule)}
+  .btn:hover{transform:translateY(-1px)}
+  .grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:26px;margin-top:6px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:white;border:1px solid var(--rule);border-radius:14px;padding:20px 20px 18px}
+  .card h2{font-family:"Instrument Serif",serif;font-weight:400;font-size:26px;margin:0 0 12px;letter-spacing:-0.01em}
+  .card h3{font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:18px 0 10px}
+  .card p{font-size:14.5px;line-height:1.65;color:var(--ink-2);margin:0 0 12px}
+  .card p:last-child{margin:0}
+  .steps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px}
+  .steps li{display:grid;grid-template-columns:26px 1fr;gap:10px}
+  .num{width:24px;height:24px;border-radius:999px;background:var(--ink);color:white;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .steps .t{font-size:14px;font-weight:600;margin:1px 0 3px;line-height:1.25}
+  .steps .d{font-size:13px;line-height:1.5;color:var(--ink-2)}
+  .formula{
+    font-family:"Instrument Serif",serif;font-size:22px;background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:8px 0;line-height:1.3;overflow-x:auto
+  }
+  .formula.muted{color:var(--ink-2);font-size:18px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .legend .chip{font-size:12px}
+  footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink-3);line-height:1.6}
+  footer a{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+  code.mono{background:var(--paper-2);border:1px solid var(--rule);padding:2px 6px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>(a+b)<span>²</span> = a² + b² + 2ab <span style="font-style:italic;font-weight:400;color:#5a6b7d">— to (x₁+x₂+…+xₙ)²</span></h1>
+    <div class="sub">
+      <strong>3Blue1Brown-style visual proof made with Manim.</strong> Started when teaching my son why <span class="mono">(a+b)²</span> isn't just <span class="mono">a²+b²</span>. 
+      Big square area = sum of small pieces. Then <span class="mono">(a+b+c)²</span> — 9 pieces. Then the pattern: <span class="mono">(x₁+x₂+…+xₙ)² = Σxᵢ² + 2Σxᵢxⱼ</span>. 
+      No clutter, squares first then cross-terms, superscript <span class="mono">²</span> everywhere, proper subscripts <span class="mono">x₁,x₂,xₙ,xᵢ,xⱼ</span>.
+    </div>
+  </header>
+
+  <div class="video-card">
+    <div class="video-frame">
+      <video controls autoplay muted loop playsinline poster="" id="mainVideo">
+        <source src="binomial-to-trinomial-pattern.mp4" type="video/mp4">
+        Your browser does not support video.
+      </video>
+    </div>
+    <div class="meta-bar">
+      <div class="meta-left">
+        <span class="chip"><i style="background:var(--a)"></i> a²</span>
+        <span class="chip"><i style="background:var(--b)"></i> b²</span>
+        <span class="chip"><i style="background:var(--c)"></i> c²</span>
+        <span class="chip"><i style="background:var(--ab)"></i> ab, ac, bc → 2ab</span>
+        <span class="chip mono">1080p60 • 2.4MB • 80 anims</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a class="btn secondary" href="binomial-to-trinomial-pattern.mp4" download>⬇ Download MP4</a>
+        <a class="btn" href="https://github.com/ashish01/binomial-square-visualization" target="_blank">↗ Source (Manim)</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>How to read the video</h2>
+        <ol class="steps">
+          <li>
+            <div class="num">1</div>
+            <div><div class="t">(a+b)² as area</div><div class="d">Outer square side = a+b on TOP+RIGHT to avoid overlap. Inner a,b on BOTTOM+LEFT. Cut at distance a. Outer fades before inner appears.</div></div>
+          </li>
+          <li>
+            <div class="num">2</div>
+            <div><div class="t">Order: squares → crosses</div><div class="d"><span class="mono">a²</span> first, then <span class="mono">b²</span>, then both <span class="mono">ab</span> rectangles together. Same order for 3 variables: <span class="mono">a²,b²,c²</span> then <span class="mono">ab,ac,bc</span> pairs. Makes the pattern obvious.</div></div>
+          </li>
+          <li>
+            <div class="num">3</div>
+            <div><div class="t">(a+b+c)² = 9 pieces</div><div class="d">Side = a+b+c broken into 3. 3×3 grid → 3 squares + 3×2 rectangles. Right column builds: <span class="mono">= a²+b²+c² + ab+ba + ac+ca + bc+cb → a²+b²+c²+2ab+2bc+2ca</span>.</div></div>
+          </li>
+          <li>
+            <div class="num">4</div>
+            <div><div class="t">Pattern</div><div class="d">Every off-diagonal pair appears twice — symmetric across diagonal. General boxed finale stays as end frame.</div></div>
+          </li>
+        </ol>
+
+        <h3>Final boxed formula</h3>
+        <div class="formula serif">(x₁+x₂+…+xₙ)² = sum xᵢ² + 2 sum<sub><span style="font-size:0.75em">i&lt;j</span></sub> xᵢ xⱼ</div>
+        <div class="formula muted serif">(x₁+x₂+…+xₙ)² = x₁²+x₂²+…+xₙ² + 2 Σ<sub>i&lt;j</sub> xᵢxⱼ — diagonal = squares, off-diagonal = pairs</div>
+
+        <div class="legend">
+          <span class="chip"><i style="background:#4f7cac"></i> diagonal = a²,b²,c²</span>
+          <span class="chip"><i style="background:#81b29a"></i> off-diagonal = ab,ac,bc ×2</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;background:var(--ink);color:#fcf9f2;border-color:var(--ink)">
+        <h2 style="color:#fcf9f2">Built with Manim — the 3Blue1Brown tool</h2>
+        <p style="color:#9aa8b6">Open source library <span class="mono" style="color:#fcf9f2">manim-community/manim</span>. Scene: <span class="mono" style="color:#fcf9f2">BinomialToTrinomialPattern</span> — 80 animations, safe margins, no overlaps, TOP/RIGHT outer vs BOTTOM/LEFT inner to avoid same-side clash.</p>
+        <p style="color:#9aa8b6"><code class="mono" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.15);color:#fcf9f2">uv run manim -pqh binomial_square.py BinomialToTrinomialPattern</code></p>
+        <p style="color:#7b8a99">Teach it: pause after Act 1, ask “what if another term c?”, then play Act 2.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Why 2ab?</h2>
+        <p>Bottom-left is <span class="mono">a²</span>. Top-right is <span class="mono">b²</span>. The other two rectangles are both <span class="mono">a×b</span> — one to the right of <span class="mono">a²</span>, one on top. Same area, two places. So <span class="mono">ab+ab=2ab</span>.</p>
+        <p>Same reason for <span class="mono">(a+b+c)²</span>: <span class="mono">ab</span> appears at (row a, col b) and (row b, col a) — symmetric across diagonal.</p>
+        <h3>Notation</h3>
+        <p><span class="mono">x₁, x₂, …, xₙ</span> with proper subscripts, <span class="mono">xᵢ, xⱼ</span> also subscript, <span class="mono">²</span> superscript everywhere — no <span class="mono">^2</span> mix. Implemented with Pango <span class="mono">&lt;sub&gt;</span> markup to avoid font gaps.</p>
+        <div class="formula" style="font-size:18px">
+          (a+b)² = a² + b² + 2ab<br>
+          (a+b+c)² = a²+b²+c² + 2(ab+bc+ca)<br>
+          (x₁+x₂+…+xₙ)² = Σxᵢ² + 2Σxᵢxⱼ
+        </div>
+        <h3>Share</h3>
+        <p>URL for this page: <span class="mono">https://ashish01.github.io/binomial/</span> — host the MP4 alongside. Copy link to share with students. Video loops, controls visible, ~2.4MB so loads fast.</p>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn secondary" onclick="navigator.clipboard.writeText(location.href);this.textContent='✓ Copied'">⎘ Copy link</button>
+          <a class="btn secondary" href="https://github.com/ashish01/ashish01.github.io/tree/master/binomial">View folder</a>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Credits & fixes</h2>
+        <p>Based on classic dissection proof. Iterated on feedback: slower pacing, declutter (fade outer before inner, TOP/RIGHT vs BOTTOM/LEFT to avoid same-side overlap), split long equations, final hold = boxed general formula + 4×4 diagonal matrix (4 squares + 12 pairs = 16 pieces).</p>
+        <p class="mono" style="font-size:11px;color:var(--ink-3)">Made for my son • Manim Community v0.20.1 • 2026-07-09</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Video: <span class="mono">binomial-to-trinomial-pattern.mp4</span> — CC0, share freely. Source Manim: <code class="mono">binomial_square.py</code> → <a href="https://github.com/ashish01/ashish01.github.io">ashish01.github.io</a> / <a href="https://github.com/ashish01">github</a>. Built with Pango subscripts so <span class="mono">x₁,x₂,…,xₙ,xᵢ,xⱼ</span> render correctly.
+  </footer>
+</div>
+<script>
+// auto pause at pattern? no, let it loop and hold finale 3.5s naturally
+document.getElementById('mainVideo').playbackRate = 1.0;
+</script>
+</body>
+</html>
