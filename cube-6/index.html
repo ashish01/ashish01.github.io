@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rubik's Cube 3D</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(ellipse at 50% 30%, #1c2a4a 0%, #0b1020 55%, #05070f 100%);
+    color: #eaf0ff;
+  }
+  #scene { position: fixed; inset: 0; }
+
+  .hud {
+    position: fixed;
+    top: 28px; left: 0; right: 0;
+    text-align: center;
+    pointer-events: none;
+    user-select: none;
+  }
+  .hud h1 {
+    font-size: clamp(26px, 4vw, 42px);
+    font-weight: 800;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #ff5252, #ffb142, #fff200, #2ed573, #1e90ff, #e056fd);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,.6));
+  }
+  .hud p {
+    margin-top: 6px;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #8fa3d0;
+  }
+
+  .controls {
+    position: fixed;
+    bottom: 34px; left: 0; right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    pointer-events: none;
+  }
+  .buttons { display: flex; gap: 16px; }
+  button {
+    pointer-events: auto;
+    cursor: pointer;
+    border: none;
+    border-radius: 999px;
+    padding: 15px 42px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  button:hover  { transform: translateY(-3px) scale(1.04); filter: brightness(1.12); }
+  button:active { transform: translateY(0) scale(.97); }
+  #scrambleBtn {
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    box-shadow: 0 8px 24px rgba(255,65,108,.45);
+  }
+  #solveBtn {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    box-shadow: 0 8px 24px rgba(56,239,125,.35);
+  }
+  #status {
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: #b9c7ea;
+    min-height: 20px;
+    text-shadow: 0 1px 6px rgba(0,0,0,.7);
+  }
+  #moves {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #66779e;
+  }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div class="hud">
+  <h1>RUBIK'S CUBE</h1>
+  <p>Drag to orbit &nbsp;•&nbsp; Scroll to zoom</p>
+</div>
+
+<div class="controls">
+  <div class="buttons">
+    <button id="scrambleBtn">🔀 Scramble</button>
+    <button id="solveBtn">✨ Solve</button>
+  </div>
+  <div id="status">Ready — hit Scramble!</div>
+  <div id="moves">Moves: 0</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* ---------- Renderer / Scene / Camera ---------- */
+const container = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(4.6, 3.8, 6.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 4;
+controls.maxDistance = 16;
+
+/* ---------- Lights ---------- */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3555, 0.85));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+keyLight.position.set(5, 8, 6);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = keyLight.shadow.camera.bottom = -6;
+keyLight.shadow.camera.right = keyLight.shadow.camera.top = 6;
+keyLight.shadow.camera.far = 30;
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x8fb8ff, 0.5);
+fillLight.position.set(-6, 2, -5);
+scene.add(fillLight);
+
+/* Soft shadow catcher under the cube */
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.ShadowMaterial({ opacity: 0.35 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2.6;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* ---------- Build the 3x3x3 cube ---------- */
+const COLORS = {
+  right:  0xd6203f, // +x red
+  left:   0xff6d1f, // -x orange
+  up:     0xf8f8f8, // +y white
+  down:   0xffd21f, // -y yellow
+  front:  0x00b050, // +z green
+  back:   0x2272ff, // -z blue
+};
+
+const bodyGeo    = new RoundedBoxGeometry(0.96, 0.96, 0.96, 4, 0.07);
+const stickerGeo = new RoundedBoxGeometry(0.82, 0.82, 0.06, 3, 0.025);
+const bodyMat    = new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.35, metalness: 0.15 });
+
+const stickerMats = {};
+for (const [face, color] of Object.entries(COLORS)) {
+  stickerMats[face] = new THREE.MeshStandardMaterial({ color, roughness: 0.28, metalness: 0.05 });
+}
+
+const FACES = [
+  { name: 'right',  dir: new THREE.Vector3( 1, 0, 0), rotY:  Math.PI / 2 },
+  { name: 'left',   dir: new THREE.Vector3(-1, 0, 0), rotY: -Math.PI / 2 },
+  { name: 'up',     dir: new THREE.Vector3( 0, 1, 0), rotX: -Math.PI / 2 },
+  { name: 'down',   dir: new THREE.Vector3( 0,-1, 0), rotX:  Math.PI / 2 },
+  { name: 'front',  dir: new THREE.Vector3( 0, 0, 1), rotY:  0 },
+  { name: 'back',   dir: new THREE.Vector3( 0, 0,-1), rotY:  Math.PI },
+];
+
+const cubies = [];
+const cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+
+for (let x = -1; x <= 1; x++)
+for (let y = -1; y <= 1; y++)
+for (let z = -1; z <= 1; z++) {
+  const cubie = new THREE.Mesh(bodyGeo, bodyMat);
+  cubie.castShadow = true;
+  cubie.position.set(x, y, z);
+
+  for (const face of FACES) {
+    // only add stickers on outward-facing sides
+    if (cubie.position.dot(face.dir) < 0.5) continue;
+    const sticker = new THREE.Mesh(stickerGeo, stickerMats[face.name]);
+    sticker.castShadow = true;
+    sticker.rotation.set(face.rotX || 0, face.rotY || 0, 0);
+    sticker.position.copy(face.dir).multiplyScalar(0.47);
+    cubie.add(sticker);
+  }
+
+  cubeGroup.add(cubie);
+  cubies.push(cubie);
+}
+
+/* Pivot used to rotate one layer at a time */
+const pivot = new THREE.Group();
+scene.add(pivot);
+
+/* ---------- Move engine (queue + eased animation) ---------- */
+const HALF_PI = Math.PI / 2;
+const queue = [];        // pending moves
+const history = [];      // executed moves, so Solve can invert them
+let current = null;      // active animation
+let moveCount = 0;
+
+const statusEl = document.getElementById('status');
+const movesEl  = document.getElementById('moves');
+let pendingStatus = null;
+
+const easeInOutCubic = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+
+function startMove(move, now) {
+  const { axis, layer, dir, duration } = move;
+
+  pivot.rotation.set(0, 0, 0);
+  pivot.updateMatrixWorld(true);
+
+  // grab all cubies in this layer (positions are exact integers between moves)
+  for (const cubie of cubies) {
+    if (Math.abs(cubie.getWorldPosition(new THREE.Vector3())[axis] - layer) < 0.5) {
+      pivot.attach(cubie);
+    }
+  }
+
+  move.start = now;
+  move.target = dir * HALF_PI;
+  move.duration = duration;
+}
+
+function finishMove(move) {
+  // hand cubies back to the cube group, preserving world transform
+  while (pivot.children.length) cubeGroup.attach(pivot.children[0]);
+  pivot.rotation.set(0, 0, 0);
+
+  // snap to the grid to kill float drift
+  for (const cubie of cubeGroup.children) {
+    cubie.position.set(
+      Math.round(cubie.position.x),
+      Math.round(cubie.position.y),
+      Math.round(cubie.position.z)
+    );
+    for (const a of ['x', 'y', 'z']) {
+      cubie.rotation[a] = Math.round(cubie.rotation[a] / HALF_PI) * HALF_PI;
+    }
+  }
+
+  moveCount++;
+  movesEl.textContent = `Moves: ${moveCount}`;
+}
+
+function updateMove(move, now) {
+  const t = Math.min((now - move.start) / move.duration, 1);
+  pivot.rotation[move.axis] = move.target * easeInOutCubic(t);
+  if (t >= 1) { finishMove(move); current = null; }
+}
+
+/* ---------- Scramble & Solve ---------- */
+const AXES = ['x', 'y', 'z'];
+const LAYERS = [-1, 0, 1];
+const SCRAMBLE_MS = 240, SOLVE_MS = 300;
+
+function randomMove(prev) {
+  let axis, layer;
+  do {
+    axis = AXES[(Math.random() * 3) | 0];
+    layer = LAYERS[(Math.random() * 3) | 0];
+  } while (prev && prev.axis === axis && prev.layer === layer); // avoid redundant same-slice turns
+  const r = Math.random();
+  const dir = r < 0.2 ? 2 : (r < 0.6 ? 1 : -1); // occasional 180° turn
+  return { axis, layer, dir };
+}
+
+document.getElementById('scrambleBtn').addEventListener('click', () => {
+  const n = 20;
+  const moves = [];
+  for (let i = 0; i < n; i++) {
+    const m = randomMove(moves[i - 1]);
+    m.duration = m.dir === 2 ? SCRAMBLE_MS * 1.6 : SCRAMBLE_MS;
+    moves.push(m);
+  }
+  history.push(...moves);
+  queue.push(...moves);
+  pendingStatus = `Scrambled — ${history.length} move${history.length === 1 ? '' : 's'} to undo. Hit Solve!`;
+  statusEl.textContent = 'Scrambling…';
+});
+
+document.getElementById('solveBtn').addEventListener('click', () => {
+  if (!history.length) {
+    statusEl.textContent = 'Nothing to solve — the cube is already pristine ✨';
+    return;
+  }
+  // undo everything: reversed history with inverted direction
+  const inverse = history.slice().reverse().map(m => ({
+    axis: m.axis,
+    layer: m.layer,
+    dir: m.dir === 2 ? 2 : -m.dir,
+    duration: m.dir === 2 ? SOLVE_MS * 1.6 : SOLVE_MS,
+  }));
+  history.length = 0;
+  queue.push(...inverse);
+  pendingStatus = 'Solved! 🎉';
+  statusEl.textContent = 'Solving…';
+});
+
+/* ---------- Main loop ---------- */
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (!current && queue.length) {
+    current = queue.shift();
+    startMove(current, now);
+  }
+  if (current) updateMove(current, now);
+  else if (pendingStatus) { statusEl.textContent = pendingStatus; pendingStatus = null; }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(tick);
+
+/* ---------- Resize ---------- */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
