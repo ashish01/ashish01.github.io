@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Results Summary Component Main</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="./images/favicon-32x32.png"
+    />
+  </head>
+  <body>
+    <div class="flex h-screen bg-white-300 shadow-xl mx-auto flex-col md:flex-row max-w-sm">
+      <div
+        class="text-center flex flex-col rounded-b-3xl bg-gradient-to-b from-indigo-500 to-indigo-800 h-2/5 items-center p-6 justify-between max-w-sm mx-auto"
+      >
+        <p class="font-bold text-white">Your Result</p>
+        <div
+          class="flex flex-col rounded-full bg-gradient-to-t from-indigo-600 to-indigo-700 p-8 w-30 h-30 justify-center items-center"
+        >
+          <p class="font-bold text-5xl text-white">76</p>
+          <p class="text-slate-400">of 100</p>
+        </div>
+        <div class="flex flex-col">
+          <p class="font-bold text-white text-2xl">Great</p>
+          <p class="text-white">
+            You scored higher than 65% of the people who have taken these tests.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-col p-6">
+        <p class="font-bold m-3">Summary</p>
+
+        <div class="flex m-2 rounded-xl bg-red-50 p-4 justify-between my-3">
+          <div class="flex">
+            <img src="./images/icon-reaction.svg" alt="" />
+            <p class="px-2 text-red-400 font-semibold">Reaction</p>
+          </div>
+          <div class="flex">
+            <p class="text-black-500 font-bold">80</p>
+            <p class="text-slate-500 font-semibold">&nbsp;/ 100</p>
+          </div>
+        </div>
+
+        <div class="flex m-2 rounded-xl bg-yellow-50 p-4 justify-between my-3">
+          <div class="flex">
+            <img src="./images/icon-memory.svg" alt="" />
+            <p class="px-2 text-yellow-400 font-semibold">Memory</p>
+          </div>
+          <div class="flex">
+            <p class="text-black-500 font-bold">92</p>
+            <p class="text-slate-500 font-semibold">&nbsp;/ 100</p>
+          </div>
+        </div>
+
+        <div class="flex m-2 rounded-xl bg-green-50 p-4 justify-between my-3">
+          <div class="flex">
+            <img src="./images/icon-verbal.svg" alt="" />
+            <p class="px-2 text-green-400 font-semibold">Verbal</p>
+          </div>
+          <div class="flex">
+            <p class="text-black-500 font-bold">61</p>
+            <p class="text-slate-500 font-semibold">&nbsp;/ 100</p>
+          </div>
+        </div>
+
+        <div class="flex m-2 rounded-xl bg-indigo-50 p-4 justify-between my-3">
+          <div class="flex">
+            <img src="./images/icon-visual.svg" alt="" />
+            <p class="px-2 text-indigo-400 font-semibold">Visual</p>
+          </div>
+          <div class="flex">
+            <p class="text-black-500 font-bold">72</p>
+            <p class="text-slate-500 font-semibold">&nbsp;/ 100</p>
+          </div>
+        </div>
+
+        <div class="flex rounded-full bg-slate-700 p-4 justify-center mt-6">
+          <a class="text-white font-bold" href="#">Continue</a>
+        </div>  
+      </div>
+
+    </div>
+    </div>
+  </body>
+</html>
